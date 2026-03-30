@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   FaGithub,
@@ -7,14 +7,7 @@ import {
   FaExternalLinkAlt,
   FaCheck,
 } from "react-icons/fa";
-import {
-  personal,
-  hero,
-  about,
-  skills,
-  projects,
-  contact,
-} from "../data/resume";
+import { api } from "../utils/api";
 import BackgroundAnimation from "../components/BackgroundAnimation";
 
 import reactLogo from "../assets/tech/react.png";
@@ -52,6 +45,34 @@ const hoverColors = [
 
 export default function Home() {
   const [contactStatus, setContactStatus] = useState(null);
+  const [personal, setPersonal] = useState(null);
+  const [hero, setHero] = useState(null);
+  const [about, setAbout] = useState(null);
+  const [experience, setExperience] = useState([]);
+  const [skills, setSkills] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [contact, setContact] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await api.getPortfolio();
+        setPersonal(data.personal);
+        setHero(data.hero);
+        setAbout(data.about);
+        setExperience(data.experience || []);
+        setSkills(data.skills);
+        setProjects(data.projects);
+        setContact(data.contact);
+      } catch (error) {
+        console.error("Failed to fetch portfolio data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -63,24 +84,28 @@ export default function Home() {
     const data = new FormData(form);
     setContactStatus("sending");
     try {
-      const res = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: data.get("name"),
-          email: data.get("email"),
-          message: data.get("message"),
-        }),
+      await api.submitContact({
+        name: data.get("name"),
+        email: data.get("email"),
+        message: data.get("message"),
       });
-      if (res.ok) {
-        setContactStatus("success");
-        form.reset();
-        setTimeout(() => setContactStatus(null), 3000);
-      } else setContactStatus("error");
-    } catch {
+      setContactStatus("success");
+      form.reset();
+      setTimeout(() => setContactStatus(null), 3000);
+    } catch (error) {
+      console.error("Contact form error:", error);
       setContactStatus("error");
+      setTimeout(() => setContactStatus(null), 3000);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="bg-[#0a0614] text-white min-h-screen flex items-center justify-center">
+        <p className="text-xl text-gray-400">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#0a0614] text-white overflow-x-hidden relative">
@@ -111,7 +136,7 @@ export default function Home() {
             transition={{ delay: 0.2 }}
             className="inline-block text-violet-400 font-semibold tracking-widest uppercase text-base md:text-lg mb-6 font-display"
           >
-            {hero.subtitle}
+            {hero?.subtitle || "Full-Stack Developer"}
           </motion.span>
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
@@ -119,8 +144,8 @@ export default function Home() {
             transition={{ duration: 0.6, delay: 0.15 }}
             className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight leading-tight font-display"
           >
-            {hero.greeting}{" "}
-            <span className="hero-name block sm:inline mt-2 sm:mt-0">{hero.nameHighlight}</span>
+            {hero?.greeting || "Hi, I'm"}{" "}
+            <span className="hero-name block sm:inline mt-2 sm:mt-0">{hero?.nameHighlight || "Developer"}</span>
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
@@ -136,7 +161,7 @@ export default function Home() {
             transition={{ delay: 0.4 }}
             className="mt-6 max-w-2xl mx-auto text-gray-300 text-xl md:text-2xl leading-relaxed"
           >
-            {hero.intro}
+            {hero?.intro || "Building modern web applications"}
           </motion.p>
           <motion.p
             initial={{ opacity: 0 }}
@@ -144,7 +169,7 @@ export default function Home() {
             transition={{ delay: 0.5 }}
             className="mt-4 text-gray-500 text-lg max-w-xl mx-auto"
           >
-            {personal.tagline}
+            {personal?.tagline || "Passionate about creating great user experiences"}
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -157,14 +182,14 @@ export default function Home() {
               onClick={() => scrollTo("projects")}
               className="btn-primary"
             >
-              {hero.ctaPrimary}
+              {hero?.ctaPrimary || "See my work"}
             </button>
             <button
               type="button"
               onClick={() => scrollTo("contact")}
               className="btn-secondary"
             >
-              {hero.ctaSecondary}
+              {hero?.ctaSecondary || "Get in touch"}
             </button>
           </motion.div>
         </motion.div>
@@ -182,7 +207,7 @@ export default function Home() {
             viewport={{ once: true }}
             className="text-5xl md:text-6xl font-bold mb-16 font-display bg-gradient-to-r from-violet-400 via-fuchsia-400 to-amber-400 bg-clip-text text-transparent"
           >
-            {about.headline}
+            {about?.headline || "About Me"}
           </motion.h2>
           <motion.div
             initial={{ opacity: 0 }}
@@ -190,13 +215,13 @@ export default function Home() {
             viewport={{ once: true }}
             className="space-y-8"
           >
-            {about.paragraphs.map((p, i) => (
+            {about?.paragraphs?.map((p, i) => (
               <p key={i} className="text-gray-300 text-lg md:text-xl leading-relaxed">
                 {p}
               </p>
             ))}
             <ul className="grid sm:grid-cols-2 gap-4 pt-4">
-              {about.highlights.map((h, i) => (
+              {about?.highlights?.map((h, i) => (
                 <motion.li
                   key={i}
                   initial={{ opacity: 0, x: -10 }}
@@ -234,35 +259,35 @@ export default function Home() {
             viewport={{ once: true }}
             className="text-gray-400 text-center text-lg md:text-xl max-w-2xl mx-auto mb-16"
           >
-            {skills.description}
+            {skills?.description || "Technologies I work with"}
           </motion.p>
           <motion.div
             variants={container}
             initial="hidden"
             whileInView="show"
             viewport={{ once: true }}
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-8"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5"
           >
-            {skills.list.map((skill, i) => {
+            {skills?.list?.map((skill, i) => {
               const imgSrc = getSkillImage(skill);
               return (
                 <motion.div
                   key={skill.name}
                   variants={item}
-                  className={`bg-[#1a1225] p-8 rounded-2xl border border-violet-500/20 shadow-lg transition-all duration-300 hover:-translate-y-2 ${hoverColors[i % hoverColors.length]}`}
+                  className={`bg-[#1a1225] p-4 rounded-xl border border-violet-500/20 shadow-lg transition-all duration-300 hover:-translate-y-2 ${hoverColors[i % hoverColors.length]}`}
                 >
                   {imgSrc ? (
                     <img
                       src={imgSrc}
                       alt={skill.name}
-                      className="w-16 h-16 mx-auto mb-4 object-contain"
+                      className="w-12 h-12 mx-auto mb-3 object-contain"
                     />
                   ) : (
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400 font-bold text-sm">
+                    <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-400 font-bold text-xs">
                       {skill.name.slice(0, 2)}
                     </div>
                   )}
-                  <p className="text-center font-semibold text-base">{skill.name}</p>
+                  <p className="text-center font-semibold text-sm">{skill.name}</p>
                 </motion.div>
               );
             })}
@@ -276,11 +301,11 @@ export default function Home() {
             <h3 className="text-2xl md:text-3xl font-bold text-center mb-8 font-display bg-gradient-to-r from-violet-400 to-amber-400 bg-clip-text text-transparent">
               Tools & concepts
             </h3>
-            <div className="flex flex-wrap justify-center gap-4">
-              {skills.tools.map((tool, i) => (
+            <div className="flex flex-wrap justify-center gap-3">
+              {skills?.tools?.map((tool, i) => (
                 <div
                   key={tool}
-                  className={`px-6 py-3 rounded-xl border border-violet-500/20 bg-[#1a1225] text-gray-300 font-medium transition-all duration-300 hover:-translate-y-2 ${hoverColors[i % hoverColors.length]}`}
+                  className={`px-4 py-2 rounded-xl border border-violet-500/20 bg-[#1a1225] text-gray-300 text-sm font-medium transition-all duration-300 hover:-translate-y-2 ${hoverColors[i % hoverColors.length]}`}
                 >
                   {tool}
                 </div>
@@ -393,7 +418,7 @@ export default function Home() {
           viewport={{ once: true }}
           className="text-5xl md:text-6xl font-bold mb-6 text-center font-display bg-gradient-to-r from-violet-400 via-fuchsia-400 to-amber-400 bg-clip-text text-transparent"
         >
-          {contact.headline}
+          {contact?.headline || "Let's work together"}
         </motion.h2>
         <motion.p
           initial={{ opacity: 0 }}
@@ -401,7 +426,7 @@ export default function Home() {
           viewport={{ once: true }}
           className="text-gray-400 text-lg md:text-xl mb-14 text-center max-w-2xl"
         >
-          {contact.subtext}
+          {contact?.subtext || "Get in touch for opportunities and collaboration"}
         </motion.p>
 
         <motion.form
@@ -415,21 +440,21 @@ export default function Home() {
             type="text"
             name="name"
             required
-            placeholder={contact.formPlaceholders.name}
+            placeholder={contact?.formPlaceholders?.name || "Your name"}
             className="w-full px-5 py-4 text-lg rounded-2xl bg-[#1a1225] border-2 border-violet-500/20 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/30 outline-none transition"
           />
           <input
             type="email"
             name="email"
             required
-            placeholder={contact.formPlaceholders.email}
+            placeholder={contact?.formPlaceholders?.email || "Your email"}
             className="w-full px-5 py-4 text-lg rounded-2xl bg-[#1a1225] border-2 border-violet-500/20 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/30 outline-none transition"
           />
           <textarea
             name="message"
             required
             rows={5}
-            placeholder={contact.formPlaceholders.message}
+            placeholder={contact?.formPlaceholders?.message || "Your message"}
             className="w-full px-5 py-4 text-lg rounded-2xl bg-[#1a1225] border-2 border-violet-500/20 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/30 outline-none transition resize-none"
           />
           <button
@@ -438,12 +463,12 @@ export default function Home() {
             className="btn-primary w-full py-4 text-lg rounded-2xl"
           >
             {contactStatus === "sending"
-              ? contact.buttonSending
+              ? contact?.buttonSending || "Sending..."
               : contactStatus === "success"
-                ? contact.buttonSuccess
+                ? contact?.buttonSuccess || "Message sent!"
                 : contactStatus === "error"
-                  ? contact.buttonError
-                  : contact.buttonSend}
+                  ? contact?.buttonError || "Failed - try again"
+                  : contact?.buttonSend || "Send message"}
           </button>
         </motion.form>
 
@@ -454,7 +479,7 @@ export default function Home() {
           className="flex gap-6 text-3xl"
         >
           <a
-            href={personal.github}
+            href={personal?.github}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-social"
@@ -463,7 +488,7 @@ export default function Home() {
             <FaGithub />
           </a>
           <a
-            href={personal.linkedin}
+            href={personal?.linkedin}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-social"
@@ -472,7 +497,7 @@ export default function Home() {
             <FaLinkedin />
           </a>
           <a
-            href={`mailto:${personal.email}`}
+            href={`mailto:${personal?.email}`}
             className="btn-social"
             aria-label="Email"
           >
@@ -480,7 +505,7 @@ export default function Home() {
           </a>
         </motion.div>
         <p className="mt-8 text-gray-500 text-base">
-          {personal.email} · {personal.phone}
+          {personal?.email} · {personal?.phone}
         </p>
       </section>
     </div>
